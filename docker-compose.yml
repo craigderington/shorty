@@ -1,7 +1,7 @@
 version: "3"
 services:
     web:
-        image: us.gcr.io/fourth-gearing-13386/shorty:latest
+        image: shorty:latest
         ports:
             - "5580:5580"
     redis:
