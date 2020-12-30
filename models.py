@@ -110,6 +110,7 @@ class URL(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User")
+    name = Column(String(500))
     full_url = Column(String(5000))
     short_url = Column(String(10), unique=True)
     full_hash = Column(String(64), unique=True)
@@ -137,3 +138,6 @@ class URL(Base):
     
     def get_clicks(self):
         return int(self.clicks)
+    
+    def get_name(self):
+        return "{}".format(str(self.name))

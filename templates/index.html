@@ -42,6 +42,9 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><i class="fa fa-share-square-o"></i> URL Details  <span class="pull-right"><i class="fa fa-info-circle"></i> Opens in a new window.</span></div>
                 <div class="panel-body">
+                    <p class="help-block">
+                        Page Title: {{ context.title }}
+                    </p>
                     <a href="{{ url_for('fetch_url', id=context.short_hash) }}" class="btn btn-lg btn-info btn-block" target="_blank">
                         <i class="fa fa-share-square-o fa-2x">
                             Fetch Shorty URL
@@ -56,6 +59,36 @@
                 </ul>
             </div>   
         </div>
+    {% endif %}
+
+    {% if urls %}
+        {% if not request.form %}
+            <table class="table table-striped" name="urldata">
+                <thead>
+                    <tr>
+                        <th>Link</th>
+                        <th>URL Name</th>
+                        <th>Hash</th>
+                        <th>Metrics</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for url in urls %}
+                    <tr>
+                        <td><a href="{{ url_for('fetch_url', id=url.short_url) }}" class="btn btn-sm btn-primary" target="_blank"><i class="fa fa-globe"></i></a></td>
+                        <td>{{ url.name }}</td>
+                        <td>{{ url.full_hash }}</td>
+                        <td>{{ url.clicks }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"><small> Found {{ total }} URLs </small></td>
+                    </tr>
+                </tfoot>
+            </table>
         {% endif %}
+    {% endif %}
 
 {% endblock %}

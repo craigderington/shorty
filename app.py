@@ -4,12 +4,13 @@ from flask_mailman import Mail, Message
 from flask_session import Session
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy, Pagination
-from sqlalchemy import text, and_, exc, func
+from sqlalchemy import text, and_, exc, func, desc
 from database import db_session, init_db
 from celery import Celery
 from models import User, Visitor, URL
 from forms import UserLoginForm, URLForm
 from urllib.parse import urlparse, urljoin
+from lxml.html import fromstring
 import config
 import random
 import datetime
@@ -18,6 +19,7 @@ import time
 import redis
 import uuid
 import requests
+import logging
 
 # debug
 debug = True
@@ -72,6 +74,11 @@ celery.conf.update(app.config)
 # Config mail
 mail = Mail(app)
 
+# gunicorn logging
+gunicorn_logger = logging.getLogger("gunicorn.error")
+app.logger.handlers = gunicorn_logger.handlers
+app.logger.setLevel(gunicorn_logger.level)
+
 # on the apps first startup, init the db
 @app.before_first_request
 def create_db():
@@ -79,13 +86,16 @@ def create_db():
     Create and init the database
     :return initialized database from models.py
     """
+    today = get_date()
     init_db()
+    app.logger.info("SQLite3 Database initialized on: {}".format(today))
     
 
 # clear all db sessions at the end of each request
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db_session.remove()
+    app.logger.info("Database session destroyed.")
 
 
 # load the user
@@ -93,7 +103,9 @@ def shutdown_session(exception=None):
 def load_user(id):
     try:
         return db_session.query(User).get(int(id))
+        app.logger.info("Querying for User: {}".format(str(id)))
     except exc.SQLAlchemyError as err:
+        app.logger.warning("Could not load User: {} error: {}".format(str(id), str(err)))
         return None
 
 
@@ -109,13 +121,14 @@ def send_async_email(msg):
     """Background task to send an email with Flask-Mail."""
     with app.app_context():
         mail.send(msg)
+        app.logger.info("Sending email as background task.")
 
 
 @celery.task(bind=True)
 def long_task(self):
     """Background task that runs a long function with progress reports."""
-    verb = ["Starting up", "Booting", "Repairing", "Loading", "Checking"]
-    adjective = ["master", "radiant", "silent", "harmonic", "fast"]
+    verb = ["Starting up", "Booting", "Repairing", "Loading", "Checking", "Resolving"]
+    adjective = ["master", "radiant", "silent", "harmonic", "fast", "network nodes"]
     noun = ["solar array", "particle reshaper", "cosmic ray", "orbiter", "bit"]
     message = ""
     total = random.randint(10, 500)
@@ -155,7 +168,8 @@ def index():
     """
     form = URLForm()
     context = None
-
+    urls = db_session.query(URL).order_by(desc(URL.clicks)).all()
+    total_urls = db_session.query(URL).count()
     if request.method == "POST":
         if "fetch-url" in request.form.keys(): # and form.validate_on_submit():
             url = form.url.data
@@ -181,6 +195,9 @@ def index():
                             )
 
                             if r.status_code == 200:
+                                tree = fromstring(r.content)
+                                title = tree.findtext(".//title")
+                                app.logger.info("Successful HTTP call to: {} returned Status: {}".format(str(req_url), str(r.status_code)))
                                 # set the request headers to encode
                                 headers = {}
                                 headers["content-type"] = request.headers["Content-Type"]
@@ -200,6 +217,7 @@ def index():
                                         # create a new short url
                                         new_url = URL(
                                             user_id=1,
+                                            name=title,
                                             full_url=str(req_url),
                                             short_url=short_hash,
                                             full_hash=url_hash,
@@ -217,6 +235,8 @@ def index():
                                         db_session.commit()
                                         new_url_id = new_url.id
                                         db_session.flush()
+                                        # log the transaction
+                                        app.logger.info("Wrote new URL data to database as ID: {}".format(str(new_url_id)))
                                         flash("Success.  Created Shorty URL: {} using hash: {}".format(str(new_url_id), str(url_hash)), 
                                             category="info")
                                         context = {
@@ -228,6 +248,7 @@ def index():
                                             "active": True,
                                             "headers": headers,
                                             "hdr_hash": headers_hash,
+                                            "title": title,
                                             "url": {
                                                 "scheme": scheme,
                                                 "netloc": netloc,
@@ -237,40 +258,48 @@ def index():
                                         }
 
                                     except exc.SQLAlchemyError as db_err:
+                                        app.logger.warning("SQLAlchemy Error: {}".format(str(db_err)))
                                         flash("A database error: {}".format(str(db_err)), category="danger")
                                         return redirect(url_for("index"))
 
                                 except ValueError as err:
                                     flash("Value Error: {}".format(str(err)), category="danger")
-                                    app.logger("Can not encode the input URL string.")
+                                    app.logger.info("Can not encode the input URL string.")
                                     return redirect(url_for("index"))
                             else:
                                 msg = "HTTP call returned error: {}".format(str(r.status_code))
                                 flash("{}".format(msg), category="danger")
+                                app.logger.info("HTTP call returned error: {}".format(str(msg)))
                                 return redirect(url_for("index"))
                         
                         except requests.exceptions.ReadTimeout as read_timeout:
                             flash("{}".format(str(read_timeout)), category="danger")
+                            app.logger.info("{}".format(str(read_timeout)))
                             return redirect(url_for("index"))
                         
                         except requests.HTTPError as http_err:
                             flash("{}".format(str(http_err)), category="danger")
+                            app.logger.info("{}".format(str(http_err)))
                             return redirect(url_for("index"))
                     else:
                         # the URL in not valid format
                         msg = "Invalid URL format, please try again..."
                         flash("{}".format(str(msg)), category="danger")
+                        app.logger.info("Invalid URL format entered.")
                         return redirect(url_for("index"))
 
             except (ValueError, TypeError) as parse_error:
                 flash("{}".format(str(parse_error)), category="danger")
+                app.logger.info("URL Parse Error: {}".format(str(parse_error)))
                 return redirect(url_for("index"))
 
     return render_template(
         "index.html",
         today=get_date(),
         form=form,
-        context=context
+        context=context,
+        urls=urls,
+        total=total_urls
     )
 
 
@@ -291,15 +320,19 @@ def fetch_url(id):
                 db_session.commit()
                 db_session.flush()
                 flash("URL Location found for: {}".format(str(url_hash)), category="info")
+                app.logger.info("Found long URL on hash: {}".format(str(url.short_url)))
                 return redirect(url.full_url)
             else:
-                flash("No long URL found for the hash: {}".format(str(id)), category="danger")
+                flash("No long URL found for the hash: {}".format(str(url_hash)), category="danger")
+                app.logger.warning("Unable to locate long URL for hash: {}".format(str(url_hash)))
                 return redirect(url_for("index"))
         except exc.SQLAlchemyError as db_err:
             flash("Database error: {}".format(str(db_err)), category="danger")
+            app.logger.info("SQLAlchemy Database Error: {}".format(str(db_err)))
             return redirect(url_for("index"))
     except ValueError as ve:
         flash("The hash for the URL is invalid: {}".format(str(ve)), category="danger")
+        app.logger.info("Invalid URL Hash: {}".format(str(ve)))
         return redirect(url_for("index"))
 
 
@@ -347,6 +380,8 @@ def parse_url(url):
     try:
         str(url)
         parsed = urlparse(url)
+        # this returns a tuple of class 
+        # ParseResult(scheme='', netloc='', path='', params='', query='', fragment='')
         return parsed
     except ValueError as err:
         return "{}".format(str(err))
