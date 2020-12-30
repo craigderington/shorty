@@ -164,96 +164,102 @@ def index():
                 if isinstance(p, tuple):
                     scheme, netloc, path, params, query = p[0], p[1], p[2], p[3], p[4]
                     # set the url scheme
-                    if scheme.startswith("https"):
-                        scheme = "https://"
-                    else:
-                        scheme = "http://"
-                    
-                    # rebuild the url string from the components
-                    req_url = scheme + netloc + path + query
-                    try:
-                        # call the URL to make sure it's up
-                        r = requests.request(
-                            "GET",
-                            req_url,
-                            timeout=timeout
-                        )
-
-                        if r.status_code == 200:
-                            # set the request headers to encode
-                            headers = {}
-                            headers["content-type"] = request.headers["Content-Type"]
-                            headers["content-length"] = request.headers["Content-Length"]
-                            headers["host"] = request.headers["host"]
-                            headers["accept-encoding"] = request.headers["Accept-Encoding"]
-                            headers["accept"] = request.headers["Accept"]
-                            headers["timestamp"] = datetime.datetime.now()
-                            headers_hash = hashlib.sha256(str(headers).encode()).hexdigest()
-                            
-                            try:
-                                encoded = str(headers["timestamp"]).encode() + req_url.encode()
-                                url_hash = hashlib.sha256(encoded).hexdigest()
-                                short_hash = url_hash[:10]
-
-                                try:
-                                    # create a new short url
-                                    new_url = URL(
-                                        user_id=1,
-                                        full_url=str(req_url),
-                                        short_url=short_hash,
-                                        full_hash=url_hash,
-                                        raw_request_headers=headers_hash,
-                                        request_headers_hash=headers_hash,
-                                        global_id=str(uuid.uuid4()),
-                                        created_on_date=datetime.datetime.now(),
-                                        modified_date=datetime.datetime.now(),
-                                        clicks=0,
-                                        archived=False,
-                                        is_url_active=True
-                                    )
-                                    # add the url to the table
-                                    db_session.add(new_url)
-                                    db_session.commit()
-                                    new_url_id = new_url.id
-                                    db_session.flush()
-                                    flash("Success.  Created URL: {}".format(str(new_url_id)), 
-                                        category="info")
-                                    context = {
-                                        "id": new_url_id,
-                                        "full_url": url, 
-                                        "full_hash": url_hash,
-                                        "short_hash": short_hash,
-                                        "clicks": 0,
-                                        "active": True,
-                                        "headers": headers,
-                                        "hdr_hash": headers_hash,
-                                        "url": {
-                                            "scheme": scheme,
-                                            "netloc": netloc,
-                                            "path": path or None,
-                                            "query": query or None
-                                        }
-                                    }
-
-                                except exc.SQLAlchemyError as db_err:
-                                    flash("A database error: {}".format(str(db_err)), category="danger")
-                                    return redirect(url_for("index"))
-
-                            except ValueError as err:
-                                flash("Value Error: {}".format(str(err)), category="danger")
-                                app.logger("Can not encode the input URL string.")
-                                return redirect(url_for("index"))
+                    if scheme != "" and netloc != "":
+                        if scheme.startswith("https"):
+                            scheme = "https://"
                         else:
-                            msg = "HTTP call returned error: {}".format(str(r.status_code))
-                            flash("{}".format(msg), category="danger")
+                            scheme = "http://"
+                    
+                        # rebuild the url string from the components
+                        req_url = scheme + netloc + path + query
+                        try:
+                            # call the URL to make sure it's up
+                            r = requests.request(
+                                "GET",
+                                req_url,
+                                timeout=timeout
+                            )
+
+                            if r.status_code == 200:
+                                # set the request headers to encode
+                                headers = {}
+                                headers["content-type"] = request.headers["Content-Type"]
+                                headers["content-length"] = request.headers["Content-Length"]
+                                headers["host"] = request.headers["host"]
+                                headers["accept-encoding"] = request.headers["Accept-Encoding"]
+                                headers["accept"] = request.headers["Accept"]
+                                headers["timestamp"] = datetime.datetime.now()
+                                headers_hash = hashlib.sha256(str(headers).encode()).hexdigest()
+                                
+                                try:
+                                    encoded = str(headers["timestamp"]).encode() + req_url.encode()
+                                    url_hash = hashlib.sha256(encoded).hexdigest()
+                                    short_hash = url_hash[:10]
+
+                                    try:
+                                        # create a new short url
+                                        new_url = URL(
+                                            user_id=1,
+                                            full_url=str(req_url),
+                                            short_url=short_hash,
+                                            full_hash=url_hash,
+                                            raw_request_headers=headers_hash,
+                                            request_headers_hash=headers_hash,
+                                            global_id=str(uuid.uuid4()),
+                                            created_on_date=datetime.datetime.now(),
+                                            modified_date=datetime.datetime.now(),
+                                            clicks=0,
+                                            archived=False,
+                                            is_url_active=True
+                                        )
+                                        # add the url to the table
+                                        db_session.add(new_url)
+                                        db_session.commit()
+                                        new_url_id = new_url.id
+                                        db_session.flush()
+                                        flash("Success.  Created Shorty URL: {} using hash: {}".format(str(new_url_id), str(url_hash)), 
+                                            category="info")
+                                        context = {
+                                            "id": new_url_id,
+                                            "full_url": url, 
+                                            "full_hash": url_hash,
+                                            "short_hash": short_hash,
+                                            "clicks": 0,
+                                            "active": True,
+                                            "headers": headers,
+                                            "hdr_hash": headers_hash,
+                                            "url": {
+                                                "scheme": scheme,
+                                                "netloc": netloc,
+                                                "path": path or None,
+                                                "query": query or None
+                                            }
+                                        }
+
+                                    except exc.SQLAlchemyError as db_err:
+                                        flash("A database error: {}".format(str(db_err)), category="danger")
+                                        return redirect(url_for("index"))
+
+                                except ValueError as err:
+                                    flash("Value Error: {}".format(str(err)), category="danger")
+                                    app.logger("Can not encode the input URL string.")
+                                    return redirect(url_for("index"))
+                            else:
+                                msg = "HTTP call returned error: {}".format(str(r.status_code))
+                                flash("{}".format(msg), category="danger")
+                                return redirect(url_for("index"))
+                        
+                        except requests.exceptions.ReadTimeout as read_timeout:
+                            flash("{}".format(str(read_timeout)), category="danger")
                             return redirect(url_for("index"))
-                    
-                    except requests.exceptions.ReadTimeout as read_timeout:
-                        flash("{}".format(str(read_timeout)), category="danger")
-                        return redirect(url_for("index"))
-                    
-                    except requests.HTTPError as http_err:
-                        flash("{}".format(str(http_err)), category="danger")
+                        
+                        except requests.HTTPError as http_err:
+                            flash("{}".format(str(http_err)), category="danger")
+                            return redirect(url_for("index"))
+                    else:
+                        # the URL in not valid format
+                        msg = "Invalid URL format, please try again..."
+                        flash("{}".format(str(msg)), category="danger")
                         return redirect(url_for("index"))
 
             except (ValueError, TypeError) as parse_error:

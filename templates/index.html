@@ -17,7 +17,9 @@
                 </button>
             </div>
         </div>
-
+        {% if not request.form %}
+            <p class="help-block" style="margin-left:5px;margin-top:10px;"><i class="fa fa-info-circle"></i> URLs should begin with <b>http://</b> or <b>https://</b></p>
+        {% endif %}
     </form>
 
 
@@ -40,9 +42,9 @@
             <div class="panel panel-default">
                 <div class="panel-heading"><i class="fa fa-share-square-o"></i> URL Details  <span class="pull-right"><i class="fa fa-info-circle"></i> Opens in a new window.</span></div>
                 <div class="panel-body">
-                    <a href="{{ url_for('fetch_url', id=context.short_hash) }}" class="btn btn-md btn-primary" target="_blank">
-                        <i class="fa fa-share-square-o">
-                            Fetch URL
+                    <a href="{{ url_for('fetch_url', id=context.short_hash) }}" class="btn btn-lg btn-info btn-block" target="_blank">
+                        <i class="fa fa-share-square-o fa-2x">
+                            Fetch Shorty URL
                         </i>
                     </a>
                 </div>
