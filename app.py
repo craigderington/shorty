@@ -134,8 +134,8 @@ def long_task(self):
             }
         )
         # log the result
-        app.logger.info("New Message: {}".format(str(message)))
-        time.sleep(1)
+        app.logger.info("Comms {} Received New Message: {}".format(str(i), str(message)))
+        time.sleep(0.25)
     
     return {
             "current": 100, 
