@@ -1,0 +1,59 @@
+{% extends "_layout.html" %}
+{% block title %}Shorty.  A Simple URL Shortener{% endblock %}
+{% block content %}
+
+    
+    <form class="form-horizontal" action="{{ url_for('index') }}" method="post">
+        <div class="input-group">
+            <input type="text" class="form-control input-lg" name="url" 
+                    placeholder="Enter your long URL..."
+                    {% if request.form %}
+                    value="{{ request.form.get('url') }}"
+                    {% endif %}
+                    >
+            <div class="input-group-btn">
+                <button type="submit" id="fetch-url" name="fetch-url" class="btn btn-lg btn-primary">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+
+    {% if context %}
+        <div class="col-lg-6" style="margin-top:20px;">
+            <div class="panel panel-default">
+                <div class="panel-heading"><i class="fa fa-check-circle-o"></i> Request Headers</div>
+                
+                <ul class="list-group">
+                  <li class="list-group-item">Host: {{ context.headers['host'] }}</li>
+                  <li class="list-group-item">Type: {{ context.headers['content-type'] }}</li>
+                  <li class="list-group-item">Encoding: {{ context.headers['accept-encoding'] }}</li>
+                  <li class="list-group-item">Length: {{ context.headers['content-length'] }}</li>
+                  <li class="list-group-item">Timestamp: {{ context.headers['timestamp'] }}</li>
+                  <li class="list-group-item"><i class="fa fa-globe"></i> Hyperlink: <a href="{{ url_for('fetch_url', id=context.short_hash) }}" target="_blank"> {{ context.short_hash }}</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-6" style="margin-top:20px">
+            <div class="panel panel-default">
+                <div class="panel-heading"><i class="fa fa-share-square-o"></i> URL Details  <span class="pull-right"><i class="fa fa-info-circle"></i> Opens in a new window.</span></div>
+                <div class="panel-body">
+                    <a href="{{ url_for('fetch_url', id=context.short_hash) }}" class="btn btn-md btn-primary" target="_blank">
+                        <i class="fa fa-share-square-o">
+                            Fetch URL
+                        </i>
+                    </a>
+                </div>
+                <ul class="list-group">
+                    <li class="list-group-item">URL Scheme: {{ context.url['scheme'] }}</li>
+                    <li class="list-group-item">Network Location: {{ context.url['netloc'] }}</li>
+                    <li class="list-group-item">URL Path: {{ context.url['path'] }}</li>
+                    <li class="list-group-item">URL Params: {{ context.url['query'] }}</li>
+                </ul>
+            </div>   
+        </div>
+        {% endif %}
+
+{% endblock %}
