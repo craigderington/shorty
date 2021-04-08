@@ -33,7 +33,7 @@ app.config["SECRET_KEY"] = config.SECRET_KEY
 
 # session persistence
 app.config["SESSION_TYPE"] = "redis"
-app.config["SESSION_REDIS"] = redis.from_url("redis://localhost:6379")
+app.config["SESSION_REDIS"] = redis.from_url("redis://localhost:6379/0")
 app.config["SESSION_PERMANENT"] = True
 sess = Session()
 sess.init_app(app)
