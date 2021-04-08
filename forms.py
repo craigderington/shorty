@@ -19,3 +19,7 @@ class UserLoginForm(FlaskForm):
 
 class URLForm(FlaskForm):
     url = StringField("URL", validators=[DataRequired()])
+
+
+class SearchForm(FlaskForm):
+    search = StringField("s", validators=[DataRequired()])
