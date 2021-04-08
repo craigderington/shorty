@@ -1,6 +1,6 @@
 from flask import Flask, make_response, redirect, request, Response, render_template, url_for, flash, g
 from flask_mailman import Mail, Message
-# from flask_sslify import SSLify
+from flask_sslify import SSLify
 from flask_session import Session
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy, Pagination
