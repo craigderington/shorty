@@ -1,6 +1,6 @@
 #! /usr/bin/python
-activate_this = "/Users/craigderington/Public/shorty/venv/bin/activate_this.py"
-execfile(activate_this, dict(__file__=activate_this))
+# activate_this = "/Users/craigderington/Public/shorty/venv/bin/activate_this.py"
+# execfile(activate_this, dict(__file__=activate_this))
 
 import os
 import sys

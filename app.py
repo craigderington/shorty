@@ -17,6 +17,7 @@ import datetime
 import hashlib
 import time
 import redis
+import re
 import uuid
 import requests
 import logging
@@ -39,7 +40,7 @@ sess.init_app(app)
 
 
 # Flask-Mail configuration
-app.config["MAIL_SERVER"] = "smtp.mailgun.org"
+app.config["MAIL_SERVER"] = "smtp.mail.me.com"
 app.config["MAIL_PORT"] = 587
 app.config["MAIL_USE_TLS"] = True
 app.config["MAIL_USERNAME"] = config.MAIL_USERNAME
@@ -118,9 +119,9 @@ def before_request():
 # tasks sections, for async functions, etc...
 @celery.task(serializer="pickle")
 def send_async_email(msg):
-    """Background task to send an email with Flask-Mail."""
+    """Background task to send an email with Flask-Mailman."""
     with app.app_context():
-        mail.send(msg)
+        msg.send()
         app.logger.info("Sending email as background task.")
 
 
@@ -412,7 +413,7 @@ def format_number(value):
 
 @app.template_filter("formatphonenumber")
 def format_phone_number(value):
-    phone_number = value.replace("(-)", "")
+    phone_number = re.sub("[^0-9]", "", value)
     return "{}-{}-{}".format(phone_number[:3], phone_number[3:6], phone_number[6:])
 
 

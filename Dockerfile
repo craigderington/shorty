@@ -1,5 +1,6 @@
 FROM python:3.9-alpine
 RUN apk update && apk upgrade
+RUN apk add --update --no-cache g++ gcc libxml2 libxslt-dev
 RUN pip install -U pip
 COPY . /app
 WORKDIR /app
