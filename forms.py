@@ -15,6 +15,8 @@ def get_campaign_types():
 class UserLoginForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
 
 
 class URLForm(FlaskForm):
